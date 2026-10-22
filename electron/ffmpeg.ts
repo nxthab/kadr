@@ -341,6 +341,13 @@ async function probeColorTags(
  * export pipeline re-encodes it once more; video-only (the audio mix always
  * reads the original).
  */
+/** ffmpeg's colormatrix knows only these names; anything 601-like maps to bt601 */
+function colormatrixName(m: string): string {
+  if (m === 'bt709' || m === 'fcc' || m === 'smpte240m' || m === 'bt2020') return m
+  if (m === 'bt2020nc' || m === 'bt2020c') return 'bt2020'
+  return 'bt601'
+}
+
 export async function makeDecoded(
   src: string,
   out: string,
@@ -370,15 +377,24 @@ export async function makeDecoded(
     // applied here or tagged on the file, so the decoder treats it exactly
     // like the original (guaranteed by the BT.709/HD gate in requestDecoded)
     // The picture is converted to BT.709 limited — a pure matrix change
-    // (swscale, no gamma or gamut transform), a no-op when the source is
+    // (no gamma or gamut transform), a no-op when the source is
     // BT.709 already. It has to be BT.709: Chromium runs its own colour
     // transform on any other space while uploading the frame, and that
     // transform would also sweep over the bottom half and lift the alpha
     // matte (128 → 143). A matte is not colour and must arrive verbatim.
-    `[c]format=yuv420p,scale=in_color_matrix=${opts.matrix || 'bt601'}:out_color_matrix=bt709[col];` +
+    // colormatrix, NOT scale: on ffmpeg 8.1 a yuva420p→yuv420p frame run through
+    // scale=in_color_matrix=…:out_color_matrix=bt709 comes out shifted (grey 40 →
+    // 38/40/40, fragments darker and greener than the preview by ~2–3 levels, up
+    // to 6 in highlights). colormatrix lands within 0.1 of a direct BT.601 decode.
+    `[c]format=yuv420p${(opts.matrix || 'bt601') === 'bt709' ? '' : `,colormatrix=${colormatrixName(opts.matrix || 'bt601')}:bt709`}[col];` +
     // the matte rides in the luma plane, mapped into the same limited range
-    // the decoder will expand back — verified to round-trip bit-exactly
-    '[a]alphaextract,format=yuv420p,scale=in_range=pc:out_range=tv[m];' +
+    // the decoder will expand back. The range is mapped BEFORE the pixel
+    // format: ffmpeg 8's gray→yuv420p already lands in limited range, so the
+    // old order (format, then scale) compressed it twice — opaque 255 came
+    // out as 217 (alpha ≈ 0.92, the layer underneath showed through) and
+    // clear 0 as 29 (a ≈ 6% veil wherever a fragment was empty). Measured on
+    // ffmpeg 8.1.2: this order gives exactly 16 and 235.
+    '[a]alphaextract,scale=in_range=pc:out_range=tv,format=yuv420p[m];' +
     '[col][m]vstack=inputs=2[v]',
     '-map', '[v]', '-an',
     '-c:v', 'libx264', '-preset', 'veryfast', '-qp', '0', '-pix_fmt', 'yuv420p',
