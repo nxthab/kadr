@@ -55,6 +55,43 @@ first draft and every one was cut.
 - **Nothing secret on screen**: keys, tokens, `.env` contents, e-mail
   addresses, real customer names, internal URLs — use stand-ins and say so.
 
+## Motion that feels physical (slow in / slow out)
+
+The sixth of Disney's 12 principles (Thomas & Johnston, *The Illusion of Life*):
+nothing real starts or stops instantly — it gathers speed and sheds it. Material
+Design states the same for UI: what ENTERS decelerates to rest
+(`cubic-bezier(0, 0, 0.2, 1)`), what LEAVES for good accelerates away
+(`cubic-bezier(0.4, 0, 1, 1)`); slowing down an exit is wasted — its end is off
+screen. Linear motion, or motion that starts at full speed from a still frame,
+reads as mechanical and home-made at once. A user's words: "любое движение,
+которое начинается в статичном кадре, должно начинаться мягко, а если что-то
+прилетает — хоть немножко замедляться перед остановкой."
+
+- **Starting from rest → ease in.** Anything that has been still on screen
+  (a message, a title, a card) starts its move slowly and accelerates. Never a
+  jump to speed on frame one.
+- **Arriving → ease out.** Anything that flies in and stops slows down before
+  the stop, even a little (a short overshoot-free settle).
+- **Leaving for good → acceleration only.** It may exit at full speed, fade or
+  blur in its fastest part; no deceleration needed.
+- **Let it be read before it moves.** Text that will travel first sits still
+  where it appeared (≥ 0.5 s, more for longer lines), then goes.
+- **Towards the camera is not linear scale.** Size is 1 / distance: drive the
+  DISTANCE with an ease-in and take `scale = 1 / d` — it grows barely at first,
+  then rushes. Growth starts softly TOGETHER with the move, not late: a user
+  rejected `f^1.8` (size barely changed for the first half). Good:
+  `s = 1 / (1 - 0.94·f^1.35)` — ×1.13 at 20 %, ×1.4 at 40 %, ×2 at 60 %, ×3.4 at
+  80 %. Fade and blur only in the last third, when it is already fast.
+- **A move may cross the cut.** A flying, dissolving element can finish over
+  the first frames of the next scene — that carries the eye across the seam.
+  Then the next scene's caption enters only after it has mostly gone (one
+  caption at a time).
+- **Strip the chrome for the flight.** When a phrase leaves its container (a
+  chat bubble, a card), let the text travel alone and the container fade where
+  it is; a flying box reads as a template.
+- Check with `kadr_sheet` at the start of the move (should barely differ from
+  the still frame), its middle and its end.
+
 ## One film, not a pile of scenes
 
 A piece with several scenes is ONE function of time: `frame(t)` — the camera,
