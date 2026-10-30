@@ -1180,6 +1180,9 @@ export interface KadrApi {
   fragmentWriteFile(id: string, name: string, content: string): Promise<string>
   /** merge changed parameter values into the fragment's params.json (null = reset to {}); returns the file's content */
   fragmentParamsWrite(id: string, patch: Record<string, FragmentParamValue> | null): Promise<Record<string, unknown>>
+  /** fork: open «Студия фрагмента» / append to its journal (electron/studio.ts) */
+  studioOpen(o: import('../electron/studio').StudioOpen): Promise<{ ok: true }>
+  studioJournal(entry: Record<string, unknown>): Promise<{ path: string }>
 
   exportDialog(defaultName: string, ext: string): Promise<string | null>
   exportBegin(job: ExportJob): Promise<void>

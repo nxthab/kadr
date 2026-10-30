@@ -41,6 +41,7 @@ import { detectBeats, clearBeats, beatTimes, useBeatsUi } from './engine/beats'
 import { bakeAudio, bakeState, bakePlan, refreshStaleBakes } from './engine/audioReact'
 import { loadSoundLibrary, findSfx, addSound, setSoundMeta, sfxFamilies, SFX_FAMILIES, SFX_USES } from './engine/sounds'
 import { useSoundsUi } from './components/SoundsDialog'
+import { openStudio } from './engine/studioOpen' // fork: «Студия фрагмента»
 
 wireLog()   // first: everything below may want to report a failure
 wireProxies()
@@ -77,6 +78,7 @@ wireOnion()
   runChecks, readingTime, cameraJerks, CHECK_LIMITS, useChecksUi,
   importModels, refreshModels, insertModelFragment, modelFragmentTsx, useModelsUi, prepareForFragment,
   useFragmentParams, setParam, resetParams, flushParamSaves, useOnion, setOnion, toggleOnion,
+  openStudio, // fork: «Студия фрагмента»
   audioStats, silencePreview, previewPoolStats,
   usePopout, openPreviewWindow, dockPreviewWindow, togglePreviewWindow,
   neonWave, neonWaveTsx, NEON_WAVE_DEFAULTS,

@@ -6,6 +6,7 @@ import { useT } from '@/i18n'
 import { bakeAudio, bakeState, bakePlan } from '@/engine/audioReact'
 import { audibleTracksInRange } from '@/engine/subtitles'
 import { useFragmentParams, paramValues, setParam, resetParams, rememberParamValues } from '@/engine/fragmentParams'
+import { openStudio } from '@/engine/studioOpen' // fork: «Студия фрагмента»
 import { CtxMenu } from './CtxMenu'
 import { Icon, Spinner } from './icons'
 
@@ -291,6 +292,8 @@ function FragmentParamsSection({ clip }: { clip: Clip }) {
       {names.length > 0 && (
         <button data-act="fp-reset" onClick={() => void resetParams(fid)}>{t('fpReset')}</button>
       )}
+      {/* fork: «Студия фрагмента» — loop A–B with these knobs, alone, without the project */}
+      <button data-act="fp-studio" onClick={() => void openStudio(clip.id)}>⟳ Студия: цикл и крутилки</button>
     </>
   )
 }

@@ -19,6 +19,7 @@ import RUNTIME_TS from './fragment-kit/runtime.ts?raw'
 import WEBPACK_TS from './fragment-kit/webpack.ts?raw'
 import ASSETS_D_TS from './fragment-kit/assets.d.ts?raw'
 import KIT_THREE_TSX from './fragment-kit/three.tsx?raw'
+import STUDIO_TSX from './fragment-kit/studio.tsx?raw' // fork: «Студия фрагмента» (STUDIO.md)
 
 export const WORKSPACE = process.env.KADR_FRAGMENTS_DIR || join(homedir(), 'kadr-fragments')
 const FRAG_DIR = () => join(WORKSPACE, 'src', 'fragments')
@@ -344,6 +345,7 @@ async function ensureWorkspace(
   await writeManaged(join(KADR_DIR(), 'webpack.ts'), WEBPACK_TS)
   await writeManaged(join(KADR_DIR(), 'assets.d.ts'), ASSETS_D_TS)
   await writeManaged(join(KADR_DIR(), 'three.tsx'), KIT_THREE_TSX)
+  await writeManaged(join(KADR_DIR(), 'studio.tsx'), STUDIO_TSX) // fork: «Студия фрагмента»
   await writeIfMissing(join(WORKSPACE, 'src', 'index.ts'), INDEX_TS)
 
   const needInstall = await migrateWorkspace()
@@ -419,7 +421,7 @@ async function awaitExisting(ms: number): Promise<string | null> {
 
 let starting: Promise<{ url: string }> | null = null
 
-async function ensureServer(): Promise<{ url: string }> {
+export async function ensureServer(): Promise<{ url: string }> {
   if (server && (!server.child || server.child.exitCode === null)) return { url: server.url }
   // one start at a time: two callers at once used to spawn two servers
   starting ??= startServer().finally(() => { starting = null })

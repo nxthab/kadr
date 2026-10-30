@@ -335,4 +335,6 @@ async function runCollide(ref: { current: PlayerRef | null }, meta: { fps: numbe
 }
 
 if (params.get('inspect') === '1') void runInspect()
+// fork: «Студия фрагмента» (STUDIO.md)
+else if (params.get('studio') === '1') void import('./src/_kadr/studio').then((m) => m.mountStudio(id))
 else createRoot(document.getElementById('root')!).render(React.createElement(App))

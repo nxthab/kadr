@@ -149,6 +149,9 @@ const api: KadrApi = {
   fragmentRelocate: (projectDir, ids) => ipcRenderer.invoke('fragment:relocate', projectDir, ids),
   fragmentWriteFile: (id, name, content) => ipcRenderer.invoke('fragment:write-file', id, name, content),
   fragmentParamsWrite: (id, patch) => ipcRenderer.invoke('fragment:params-write', id, patch),
+  // fork: «Студия фрагмента» (electron/studio.ts)
+  studioOpen: (o) => ipcRenderer.invoke('studio:open', o),
+  studioJournal: (entry) => ipcRenderer.invoke('studio:journal', entry),
   fragmentCaptureStart: (id, url, w, h, fps) =>
     ipcRenderer.invoke('fragment:capture-start', id, url, w, h, fps),
   fragmentCaptureStop: (id) => ipcRenderer.invoke('fragment:capture-stop', id),

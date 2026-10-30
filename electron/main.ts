@@ -17,6 +17,7 @@ import { registerVoiceIpc } from './voice'
 import { registerEnvelopeIpc } from './envelope'
 import { registerSoundsIpc } from './sounds'
 import { registerFragmentIpc, cancelFragmentRenders, stopAllCaptures } from './fragments'
+import { registerStudioIpc } from './studio' // fork: «Студия фрагмента»
 import { applyGpuChoice, registerGpuIpc } from './gpu'
 import { registerModelIpc } from './models'
 import { sourceHdr, hdrLut, hdrFilter, fragmentMedia } from './hdr'
@@ -277,6 +278,7 @@ app.whenReady().then(() => {
   registerGpuIpc()
   registerModelIpc()
   registerFragmentIpc(() => win)
+  registerStudioIpc()
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
