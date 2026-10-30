@@ -25,6 +25,8 @@ mixes audio and muxes/transcodes per preset.
   `check-limiter.mjs` (the export master limiter),
   `check-audio-placement.mjs` (every audio clip of a mux on its sample,
   over several runs) and
+  `check-packed-alpha.mjs` (the packed alpha intermediate: colour against a
+  direct BT.601 decode, the matte on 16…235, BT.709 passed through) and
   `check-sfx-labels.mjs` (sound labels vs /brag's 228) and `check-hdr.mjs`
   (the HDR → SDR maths and ffmpeg's own filter chain against the formula);
   `check-models.mjs` (3MF build items/components/units, STL, OBJ, GLB,
@@ -443,7 +445,15 @@ mixes audio and muxes/transcodes per preset.
     `Mp4FrameSource` re-wraps the frames as BT.709 on the CPU: a tagged
     frame goes through Chromium's colour-managed upload, which rewrites
     mid-tones and would lift the matte (128 → 143). `KADR_DISABLE_ALPHA_PACK`
-    forces the old path.
+    forces the old path. TWO ffmpeg 8 TRAPS in the packer, both measured on
+    8.1.2: the matrix change is done with `colormatrix`, not
+    `scale=in_color_matrix=…:out_color_matrix=bt709` (that shifted even greys
+    by 2–3 levels, fragments came out darker and greener than the preview);
+    and the matte's full→limited range is mapped BEFORE `format=yuv420p`,
+    because gray→yuv420p already lands in limited range — the other order
+    compressed it twice (opaque 255 → 217, the clip underneath showed through
+    at ~8 %; clear 0 → 29, a ~6 % veil wherever the fragment was empty). Test:
+    `scripts/check-packed-alpha.mjs`.
   * MOOV AT THE END (any file not written with faststart) is picked up by
     fetching the file's tail (`pumpTail`) instead of dropping to element
     seeks.

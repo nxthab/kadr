@@ -34,9 +34,11 @@ export function mediaCacheKey(
 const SDR = `:sdr${HDR_VERSION > 1 ? HDR_VERSION : ''}`
 export const proxySuffix = (alpha?: boolean, sdr?: boolean) => (alpha ? ':a' : sdr ? SDR : '')
 
-/** decoded: packed colour+matte, plain alpha, an HDR source tone-mapped, or none of these */
+/** decoded: packed colour+matte, plain alpha, an HDR source tone-mapped, or none of these.
+    A packed file is keyed ':p3': the old ':p' packs carry a double-compressed matte and
+    shifted colours and must not be reused (':p2' was taken by a pre-release build of the fix) */
 export const decodedSuffix = (opts?: { alpha?: boolean; packed?: boolean; sdr?: boolean }) =>
-  opts?.packed ? ':p' : opts?.alpha ? ':a' : opts?.sdr ? SDR : ''
+  opts?.packed ? ':p3' : opts?.alpha ? ':a' : opts?.sdr ? SDR : ''
 
 /** reversed: the same source cut differently is a different render */
 export const reverseSuffix = (start: number, duration: number) =>
