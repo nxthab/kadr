@@ -10,6 +10,7 @@ on:
     - cron: '17 5 * * *' # каждый день 05:17 UTC
   workflow_dispatch: {}
 
+# флаги — yes/no, не 0/1: у виразах GitHub порожній рядок дорівнює '0'
 permissions:
   contents: write
   pull-requests: write
@@ -44,29 +45,29 @@ jobs:
           git push origin upstream/main:refs/heads/main || echo "::warning::main форка разошёлся с апстримом — не трогаю"
           if git merge-base --is-ancestor upstream/main HEAD; then
             echo "Новых правок у автора нет (upstream $sha уже в $BUILD)."
-            echo "new=0" >> "$GITHUB_OUTPUT"
+            echo "new=no" >> "$GITHUB_OUTPUT"
           else
-            echo "new=1" >> "$GITHUB_OUTPUT"
+            echo "new=yes" >> "$GITHUB_OUTPUT"
             git log --oneline HEAD..upstream/main | tee upstream-commits.txt
           fi
 
       - name: Примерка к сборке
         id: merge
-        if: steps.up.outputs.new == '1'
+        if: steps.up.outputs.new == 'yes'
         run: |
           branch="sync/upstream-${{ steps.up.outputs.sha }}"
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
           git checkout -b "$branch"
           if git merge --no-edit upstream/main; then
-            echo "conflict=0" >> "$GITHUB_OUTPUT"
+            echo "conflict=no" >> "$GITHUB_OUTPUT"
           else
             git diff --name-only --diff-filter=U | tee conflicts.txt
-            echo "conflict=1" >> "$GITHUB_OUTPUT"
+            echo "conflict=yes" >> "$GITHUB_OUTPUT"
             git merge --abort
           fi
 
       - name: Конфликт → письмо
-        if: steps.merge.outputs.conflict == '1'
+        if: steps.merge.outputs.conflict == 'yes'
         run: |
           {
             echo "## ⚠️ Kadr ${{ steps.up.outputs.sha }}: конфликт с нашей сборкой"
@@ -77,14 +78,14 @@ jobs:
           exit 1
 
       - uses: actions/setup-node@v4
-        if: steps.merge.outputs.conflict == '0'
+        if: steps.merge.outputs.conflict == 'no'
         with:
           node-version: 22
           cache: npm
 
       - name: Проверки
         id: checks
-        if: steps.merge.outputs.conflict == '0'
+        if: steps.merge.outputs.conflict == 'no'
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
         run: |
@@ -96,7 +97,7 @@ jobs:
           echo "ok=$ok" >> "$GITHUB_OUTPUT"
 
       - name: Предложение слить
-        if: steps.merge.outputs.conflict == '0'
+        if: steps.merge.outputs.conflict == 'no'
         run: |
           branch="${{ steps.merge.outputs.branch }}"
           sha="${{ steps.up.outputs.sha }}"
