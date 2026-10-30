@@ -292,7 +292,10 @@ server.registerTool('kadr_check', {
     'It reads what each fragment DECLARES about itself — export `inspect` with the fragment: ' +
     '`export const fragment = { component, meta, inspect }` where inspect = { events: [{t, kind: ' +
     '"big"|"small", label}], texts: [{from, to, text, sub?, role?: "title"|"note"|"caption", box?: ' +
-    '[x,y,w,h], color?, at?: (t) => [x,y]}], camera?: (t) => ({pos, target, fov}), continuous?: ' +
+    '[x,y,w,h], color?, at?: (t) => [x,y]}], camera?: (t) => ({pos, target, fov}), tracks?: [{name, ' +
+    'at: (t) => ({x, y, scale?, opacity?}), size?: [w,h], starts?/ends?: "offscreen"|"impact", ' +
+    'readable?, blur?}] (moving 2D objects: a start without easing, a dead stop, a speed jump, a ' +
+    'fast move that strobes without blur, readable text too fast, a jump), continuous?: ' +
     'true } (composition seconds / pixels; types in "@kadr/runtime": defineInspect, KadrInspect). ' +
     'Warns about: an event off the beat (>40 ms), a BIG event not on the first beat of a bar, an ' +
     'event inside a pause of the music, a caption shown shorter than its reading time (1–3 words ' +

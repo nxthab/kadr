@@ -79,11 +79,29 @@ export interface KadrCameraState {
   fov?: number
 }
 
+/** One moving object for the motion check: its state as a function of composition time.
+    `size` turns a scale change into the travel of its corner; `starts`/`ends` 'offscreen'
+    allow an out-curve entrance from beyond the frame edge, 'impact' a shorter brake;
+    `readable` — text read while fully visible; `blur` — the fragment blurs its fast moves. */
+export interface KadrTrack {
+  name: string
+  at: (t: number) => { x: number; y: number; scale?: number; opacity?: number }
+  from?: number
+  to?: number
+  size?: [number, number]
+  starts?: 'offscreen' | 'impact'
+  ends?: 'offscreen' | 'impact'
+  readable?: boolean
+  blur?: boolean
+}
+
 export interface KadrInspect {
   events?: KadrEvent[]
   texts?: KadrText[]
   /** the camera as a function of time — checked for jerks */
   camera?: (t: number) => KadrCameraState
+  /** 2D objects that move — checked for choppy motion (src/engine/motionCheck.ts) */
+  tracks?: KadrTrack[]
   /** this fragment is a window of one continuous film: its cuts against the
       neighbouring window of the same film must be invisible (seam check) */
   continuous?: boolean

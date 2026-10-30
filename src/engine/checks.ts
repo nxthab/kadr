@@ -15,6 +15,7 @@ import { useEditor } from '@/state/store'
 import { evalAnim } from './anim'
 import { framePixels } from './snapshot'
 import { logInfo } from './log'
+import { motionIssues } from './motionCheck'
 
 /** The limits, named. Each is a rule a reviewer would apply by eye. */
 export const CHECK_LIMITS = {
@@ -49,7 +50,7 @@ export type CheckKind =
   | 'inspectError' | 'noBeats'
   | 'offBeat' | 'bigOffDownbeat' | 'emptyDownbeats' | 'eventInPause'
   | 'textShort' | 'textConcurrent' | 'textOverlap' | 'textMoving' | 'contrast'
-  | 'seam' | 'cameraJerk' | 'collision' | 'contact'
+  | 'seam' | 'cameraJerk' | 'collision' | 'contact' | 'motion'
 
 export interface CheckIssue {
   kind: CheckKind
@@ -402,6 +403,9 @@ export async function runChecks(opts: { clipIds?: string[]; pixels?: boolean; co
         }
       }
     }
+
+    // ---- 2D motion: starts, stops and jumps a contact sheet never shows (motionCheck.ts) ----
+    for (const { clip } of clips) { const ins = inspects.get(clip.fragmentId!)!; if (!ins.ok) continue; for (const m of motionIssues(ins.tracks, { fps: project.fps, width: ins.meta.width })) { const a = toTimeline(clip, m.t); if (a !== null) issues.push({ kind: 'motion', level: m.level, t: a, end: toTimeline(clip, m.end) ?? a, clipId: clip.id, fragmentId: clip.fragmentId!, message: m.message }) } }
 
     // ---- one main caption at a time; captions that cover each other ---------
     titles.sort((a, b) => a.t0 - b.t0)

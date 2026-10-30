@@ -1082,6 +1082,8 @@ export type FragmentInspect =
       }[]
       /** [t, pos, target, fov] samples */
       camera: [number, [number, number, number], [number, number, number], number | null][]
+      /** moving 2D objects, [t, x, y, scale, opacity] samples (src/engine/motionCheck.ts) */
+      tracks?: import('../src/engine/motionCheck').InspectTrack[]
       continuous: boolean
       /** defineParams declarations (runtime.ts) and the values params.json held */
       params?: Record<string, FragmentParamDecl>

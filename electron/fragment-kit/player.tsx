@@ -249,6 +249,13 @@ async function runInspect() {
         camera.push([r3(t), c.pos.map(r6), c.target.map(r6), c.fov ?? null])
       }
     }
+    // moving 2D objects at the fragment's own frame rate: a start without easing lives in 1–2 frames
+    const tracks = (Array.isArray(ins.tracks) ? ins.tracks : []).filter((x: any) => typeof x?.at === 'function').map((x: any) => {
+      const samples: number[][] = []
+      const a = Math.max(0, Number(x.from ?? 0)), b = Math.min(dur, Number(x.to ?? dur))
+      for (let t = a; t <= b + 1e-9; t += 1 / meta.fps) { const s = x.at(t); samples.push([r3(t), r6(s.x), r6(s.y), r6(s.scale ?? 1), r6(s.opacity ?? 1)]) }
+      return { name: String(x.name ?? 'object'), size: x.size, starts: x.starts, ends: x.ends, readable: !!x.readable, blur: !!x.blur, samples }
+    })
     const events = (Array.isArray(ins.events) ? ins.events : [])
       .map((e: any) => ({ t: r3(e.t), kind: e.kind === 'big' ? 'big' : 'small', label: e.label == null ? undefined : String(e.label) }))
     // parameters: what the module declared (defineParams runs at import) and
@@ -263,7 +270,7 @@ async function runInspect() {
         min: num(d.min), max: num(d.max), step: num(d.step)
       }
     }
-    K.__kadrInspect = { ok: true, meta, events, texts, camera, continuous: !!ins.continuous, params, paramValues: saved }
+    K.__kadrInspect = { ok: true, meta, events, texts, camera, tracks, continuous: !!ins.continuous, params, paramValues: saved }
   } catch (e: any) {
     K.__kadrInspect = { ok: false, error: String(e?.stack || e) }
   }
