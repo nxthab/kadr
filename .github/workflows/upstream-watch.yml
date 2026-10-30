@@ -1,0 +1,120 @@
+# Слежение за апстримом (форк nxthab/kadr, см. FORK.md).
+# Раз в сутки: есть ли новое в HelpFreedom/kadr main → примерить к нашей сборке
+# yujin/build → проверки (типы, самотест проверки движения) → предложение слить (PR)
+# с отчётом. Конфликт или упавшие проверки — запуск падает, GitHub шлёт письмо.
+# Ничего не сливается само: кнопку в PR нажимает Юджин.
+name: upstream-watch
+
+on:
+  schedule:
+    - cron: '17 5 * * *' # каждый день 05:17 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: upstream-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    env:
+      UPSTREAM: https://github.com/HelpFreedom/kadr.git
+      BUILD: yujin/build
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: yujin/build
+          fetch-depth: 0
+
+      - name: Апстрим
+        id: up
+        run: |
+          git config user.name "upstream-watch"
+          git config user.email "upstream-watch@users.noreply.github.com"
+          git remote add upstream "$UPSTREAM"
+          git fetch --no-tags upstream main
+          sha=$(git rev-parse --short upstream/main)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          # зеркало: main форка = main апстрима (только перемотка вперёд)
+          git push origin upstream/main:refs/heads/main || echo "::warning::main форка разошёлся с апстримом — не трогаю"
+          if git merge-base --is-ancestor upstream/main HEAD; then
+            echo "Новых правок у автора нет (upstream $sha уже в $BUILD)."
+            echo "new=0" >> "$GITHUB_OUTPUT"
+          else
+            echo "new=1" >> "$GITHUB_OUTPUT"
+            git log --oneline HEAD..upstream/main | tee upstream-commits.txt
+          fi
+
+      - name: Примерка к сборке
+        id: merge
+        if: steps.up.outputs.new == '1'
+        run: |
+          branch="sync/upstream-${{ steps.up.outputs.sha }}"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          git checkout -b "$branch"
+          if git merge --no-edit upstream/main; then
+            echo "conflict=0" >> "$GITHUB_OUTPUT"
+          else
+            git diff --name-only --diff-filter=U | tee conflicts.txt
+            echo "conflict=1" >> "$GITHUB_OUTPUT"
+            git merge --abort
+          fi
+
+      - name: Конфликт → письмо
+        if: steps.merge.outputs.conflict == '1'
+        run: |
+          {
+            echo "## ⚠️ Kadr ${{ steps.up.outputs.sha }}: конфликт с нашей сборкой"
+            echo; echo "Файлы:"; sed 's/^/- `/; s/$/`/' conflicts.txt
+            echo; echo "Точки подключения наших доработок: MOTION-CHECK.md, STUDIO.md. Новые коммиты автора:"
+            echo '```'; cat upstream-commits.txt; echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
+      - uses: actions/setup-node@v4
+        if: steps.merge.outputs.conflict == '0'
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Проверки
+        id: checks
+        if: steps.merge.outputs.conflict == '0'
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+        run: |
+          set -o pipefail
+          ok=1
+          npm ci --ignore-scripts 2>&1 | tail -5
+          npm run typecheck 2>&1 | tee typecheck.txt || ok=0
+          node scripts/check-motion.mjs 2>&1 | tee motion.txt || ok=0
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"
+
+      - name: Предложение слить
+        if: steps.merge.outputs.conflict == '0'
+        run: |
+          branch="${{ steps.merge.outputs.branch }}"
+          sha="${{ steps.up.outputs.sha }}"
+          ok="${{ steps.checks.outputs.ok }}"
+          git push -f origin "$branch"
+          mark=$([ "$ok" = 1 ] && echo "✅ совместимо" || echo "❌ проверки не прошли")
+          {
+            echo "Обновление Kadr у автора (HelpFreedom/kadr main → \`$sha\`), примеренное к нашей сборке \`$BUILD\`."
+            echo; echo "**$mark**"
+            echo; echo "Новые коммиты автора:"; echo '```'; cat upstream-commits.txt; echo '```'
+            echo; echo "Проверка типов: $(grep -q 'error' typecheck.txt && echo '❌' || echo '✅')"
+            echo; echo "Самотест проверки движения:"; echo '```'; tail -3 motion.txt; echo '```'
+            echo; echo "После слияния: \`cd CC_base/KADR-motion && git pull\` и перезапустить Kadr."
+          } > body.md
+          if gh pr view "$branch" --json state -q .state 2>/dev/null | grep -q OPEN; then
+            gh pr edit "$branch" --title "Kadr $sha: $mark" --body-file body.md
+          else
+            gh pr create --base "$BUILD" --head "$branch" --title "Kadr $sha: $mark" --body-file body.md
+          fi
+          cat body.md >> "$GITHUB_STEP_SUMMARY"
+          [ "$ok" = 1 ]
