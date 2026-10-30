@@ -22,7 +22,9 @@ mixes audio and muxes/transcodes per preset.
   `check-voicemap.mjs` (time remapping after a splice),
   `check-beats.mjs [resources/music]` (beat analysis; with the folder it is
   compared beat for beat with librosa's own cues), and with ffmpeg
-  `check-limiter.mjs` (the export master limiter) and
+  `check-limiter.mjs` (the export master limiter),
+  `check-audio-placement.mjs` (every audio clip of a mux on its sample,
+  over several runs) and
   `check-sfx-labels.mjs` (sound labels vs /brag's 228) and `check-hdr.mjs`
   (the HDR → SDR maths and ffmpeg's own filter chain against the formula);
   `check-models.mjs` (3MF build items/components/units, STL, OBJ, GLB,
@@ -94,9 +96,18 @@ mixes audio and muxes/transcodes per preset.
 - `electron/ffmpeg.ts` — ffprobe probing (+ thumbnails + peak/RMS waveform
   bins), `makeProxy` (540p preview proxies), `makeReversed` (backwards
   render of a clip's source range, RAM-bounded chunks), `ExportMuxer`
-  (per-segment `volume,atempo*,afade,adelay,apad,atrim` → `amix` with
-  exact level compensation), `RawVideoEncoder` (fallback raw-frame
-  encoder; the primary one is spawned by the preload).
+  (per-segment `volume,atempo*,afade` + a silence prefix, then `apad,atrim`
+  → `amix` with exact level compensation), `RawVideoEncoder` (fallback
+  raw-frame encoder; the primary one is spawned by the preload).
+  A SEGMENT IS PLACED BY CONCAT, NOT BY `adelay`: with ffmpeg 8.1 a graph
+  of a few short clips put ONE of them at 0:00 instead of its place —
+  measured on a real film (its intro sound under the opening, silence where
+  it belonged; 8 of 10 identical runs wrong) and on synthetic bursts (every
+  run wrong, the video mux and the audio-only one alike). Each clip alone,
+  or a pair, lands right; which one loses its delay depends on the set.
+  `aevalsrc=0:d=<lead>` + `concat` prepends the silence instead: ordered by
+  construction, and sample-exact where adelay rounded to 1 ms. Test:
+  `scripts/check-audio-placement.mjs` (fails 10/10 on the adelay graph).
   TWO LIMITS A BIG TIMELINE WALKS INTO, both met on a real 19-minute edit
   carrying ~1000 SFX clips. One graph with N padded inputs costs the ffmpeg
   scheduler roughly QUADRATICALLY in N: that mix ran at a quarter of realtime —

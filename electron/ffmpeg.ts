@@ -805,14 +805,21 @@ export class ExportMuxer {
       const labels: string[] = []
       segs.forEach((s, i) => {
         const idx = i + (hasVideo ? 1 : 0)
-        const ms = Math.round(s.start * 1000)
-        const chain = [
-          ...segmentChain(s),
-          `adelay=${ms}|${ms}`,
-          'apad',
-          `atrim=0:${job.duration.toFixed(3)}`
-        ]
-        filters.push(`[${idx}:a]${chain.join(',')}[a${i}]`)
+        const tail = ['apad', `atrim=0:${job.duration.toFixed(3)}`].join(',')
+        // a segment is placed by PREPENDING silence (concat), not by adelay:
+        // with ffmpeg 8.1 a graph of a few short clips put one of them at 0:00
+        // instead of its place (a real film: 8 of 10 identical runs; synthetic
+        // bursts: every run, with or without video). concat is ordered by
+        // construction and sample-exact (adelay rounded to 1 ms).
+        // Test: scripts/check-audio-placement.mjs
+        const lead = Math.round(s.start * MIX_RATE)
+        if (lead > 0) {
+          filters.push(`[${idx}:a]${segmentChain(s).join(',')}[s${i}]`)
+          filters.push(`aevalsrc=0|0:s=${MIX_RATE}:d=${(lead / MIX_RATE).toFixed(9)}[z${i}]`)
+          filters.push(`[z${i}][s${i}]concat=n=2:v=0:a=1,${tail}[a${i}]`)
+        } else {
+          filters.push(`[${idx}:a]${segmentChain(s).join(',')},${tail}[a${i}]`)
+        }
         labels.push(`[a${i}]`)
       })
       // the master stage: a transparent-below-the-limit peak limiter on real
